@@ -1,0 +1,4 @@
+overwatch-stat-collector
+
+*.sqlite
+*.sqlite3
