@@ -4,7 +4,9 @@ import (
 	"database/sql"
 
 	"github.com/b-turchyn/overwatch-stat-collector/data"
+	"github.com/b-turchyn/overwatch-stat-collector/util"
 	_ "github.com/mattn/go-sqlite3"
+	"go.uber.org/zap"
 )
 
 func OpenDatabase(dbname string) (*sql.DB, error) {
@@ -66,6 +68,7 @@ func createStatsTable(db *sql.DB) error {
 }
 
 func GetAllUsers(db *sql.DB) ([]data.Player, error) {
+  util.Logger.Debug("Selecting all users")
   var result []data.Player
   stmt, err := db.Prepare("SELECT name, number FROM users ORDER BY id")
 
@@ -92,6 +95,7 @@ func GetAllUsers(db *sql.DB) ([]data.Player, error) {
 }
 
 func InsertAllPlayerStats(db *sql.DB, playerStats map[data.Player]data.PlayerStats) error {
+  util.Logger.Debug("Inserting all stats")
   for _, v := range playerStats {
     err := InsertPlayerStats(db, v)
     if err != nil {
@@ -102,7 +106,39 @@ func InsertAllPlayerStats(db *sql.DB, playerStats map[data.Player]data.PlayerSta
   return nil
 }
 
+func GetPlayerStats(db *sql.DB, p data.Player) ([]data.PlayerStats, error) {
+  var result []data.PlayerStats
+
+  stmt, err := db.Prepare(`
+    SELECT created_at, games_played, games_won, tank_level, damage_level, support_level
+    FROM stats s
+    INNER JOIN users u ON u.id = s.user_id
+    AND u.name = ? AND u.number = ?
+    ORDER BY s.created_at
+  `)
+
+  if err != nil {
+    return nil, err
+  }
+  defer stmt.Close()
+
+  rows, err := stmt.Query(p.Name, p.Number)
+
+  for rows.Next() {
+    row := data.PlayerStats{
+      Player: p,
+    }
+
+    rows.Scan(&row.CollectionDate, &row.GamesPlayed, &row.GamesWon, &row.TankLevel, &row.DamageLevel, &row.SupportLevel)
+
+    result = append(result, row)
+  }
+
+  return result, nil
+}
+
 func InsertPlayerStats(db *sql.DB, p data.PlayerStats) error {
+  util.Logger.Debug("Inserting stats", zap.String("name", p.Player.Name), zap.Int("number", p.Player.Number))
   stmt, err := db.Prepare(`INSERT INTO stats
     (user_id, created_at, games_played, games_won, tank_level, damage_level, support_level)
     VALUES

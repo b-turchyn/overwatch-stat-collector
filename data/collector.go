@@ -6,6 +6,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/b-turchyn/overwatch-stat-collector/util"
+	"go.uber.org/zap"
 )
 
 type Player struct {
@@ -61,6 +64,7 @@ func CollectAll(players []Player) (map[Player]PlayerStats, error) {
 }
 
 func CollectUser(player Player) (PlayerStats, error) {
+  util.Logger.Info("Retrieving data for user", zap.String("name", player.Name), zap.Int("number", player.Number))
   result := PlayerStats{
     Player: player,
     CollectionDate: time.Now().Local(),
