@@ -15,7 +15,8 @@
           Season Dropdown
         </div>
         <div class="col-md-3 col-xl-2">
-          Player Dropdown
+          <select id="player-select" class="form-select" aria-label="Player dropdown">
+          </select>
         </div>
       </div>
       <div class="row">
@@ -26,15 +27,73 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js" integrity="sha256-ErZ09KkZnzjpqcane4SCyyHsKAXMvID9/xwbl/Aq1pc=" crossorigin="anonymous"></script>
     <script>
+      var playerSelect;
+      const ready = function(fn) {
+        if (document.readyState != 'loading') {
+          fn();
+        } else {
+          document.addEventListener('DOMContentLoaded', fn);
+        }
+      };
+      const getPlayers = () => {
+        fetch("/users")
+          .then(res => res.json())
+          .then(res => {
+            playerSelect.innerHTML = "";
+            
+            res.forEach((p) => {
+              const e = document.createElement("option");
+              e.setAttribute('value', `${p.name}-${p.number}`);
+              e.innerText = e.getAttribute('value');
+              playerSelect.appendChild(e);
+            });
+
+            getPlayerData(playerSelect.value);
+          })
+      };
+
+      const getPlayerData = (battletag) => {
+        fetch(`/users/${battletag}`)
+          .then(res => res.json())
+          .then(res => {
+            let labels = res.map(i => i.CollectionDate);
+            let dataTank = res.map(i => i.TankLevel == 0 ? NaN : i.TankLevel);
+            let dataDamage = res.map(i => i.DamageLevel == 0 ? NaN : i.DamageLevel);
+            let dataSupport = res.map(i => i.SupportLevel == 0 ? NaN : i.SupportLevel);
+
+            myChart.data = {
+              labels: labels,
+              datasets: [
+                {
+                  label: 'Tank',
+                  data: dataTank,
+                  borderColor: '#DD0'
+                },
+                {
+                  label: 'Damage',
+                  data: dataDamage,
+                  borderColor: '#D00'
+                },
+                {
+                  label: 'Support',
+                  data: dataSupport,
+                  borderColor: '#00D'
+                },
+              ]
+            };
+            myChart.update();
+          });
+      };
+
+      ready(() => {
+        playerSelect = document.getElementById("player-select");
+        playerSelect.addEventListener('change', () => getPlayerData(playerSelect.value), false);
+        getPlayers();
+      })
       const ctx = document.getElementById("chart").getContext("2d");
 const myChart = new Chart(ctx, {
     type: 'line',
     data: {
-        labels: ['2022-05-10', '2022-05-11', '2022-05-12', '2022-05-13', '2022-05-14', '2022-05-15'],
-        datasets: [{
-            label: 'Tank',
-            data: [1200, 1500, 2000, 2310, 2510, 2413]
-        }]
     },
     options: {
         scales: {

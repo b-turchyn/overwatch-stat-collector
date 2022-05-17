@@ -11,19 +11,25 @@ import (
 	"go.uber.org/zap"
 )
 
+type Date time.Time
+
 type Player struct {
-  Name string
-  Number int
+  Name string `json:"name"`
+  Number int `json:"number"`
 }
 
 type PlayerStats struct {
-  CollectionDate time.Time
+  CollectionDate Date
   Player Player
   GamesPlayed int
   GamesWon int
   TankLevel int
   DamageLevel int
   SupportLevel int
+}
+
+func (t Date) MarshalJSON() ([]byte, error) {
+  return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02"))), nil
 }
 
 type ApiResult struct {
@@ -67,7 +73,7 @@ func CollectUser(player Player) (PlayerStats, error) {
   util.Logger.Info("Retrieving data for user", zap.String("name", player.Name), zap.Int("number", player.Number))
   result := PlayerStats{
     Player: player,
-    CollectionDate: time.Now().Local(),
+    CollectionDate: Date(time.Now().Local()),
   }
 
   result.Player = player
